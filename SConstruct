@@ -104,7 +104,7 @@ def update_repository(data, clone_path, branch = 'master'):
     cwd = os.getcwd()
 
     full_path = cwd + clone_path + data[1] + '/'
-    
+
     if not os.path.isdir(full_path):
         os.chdir(cwd + clone_path)
 
@@ -115,11 +115,11 @@ def update_repository(data, clone_path, branch = 'master'):
     subprocess.call('git reset', shell=True)
     subprocess.call('git reset --hard', shell=True)
     subprocess.call('git clean -f -d', shell=True)
-    subprocess.call('git checkout -B ' + branch + ' origin/' + branch, shell=True)
+    subprocess.call(f'git checkout -B {branch} origin/{branch}', shell=True)
     subprocess.call('git reset', shell=True)
     subprocess.call('git reset --hard', shell=True)
     subprocess.call('git clean -f -d', shell=True)
-    subprocess.call('git pull origin ' + branch, shell=True)
+    subprocess.call(f'git pull origin {branch}', shell=True)
 
     process = subprocess.Popen('git rev-parse HEAD', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output = process.communicate()[0].decode().strip()
@@ -135,7 +135,7 @@ def setup_repository(data, clone_path, branch = 'master'):
     cwd = os.getcwd()
 
     full_path = cwd + clone_path + data[1] + '/'
-    
+
     if not os.path.isdir(full_path):
         os.chdir(cwd + clone_path)
 
@@ -146,15 +146,15 @@ def setup_repository(data, clone_path, branch = 'master'):
     subprocess.call('git reset', shell=True)
     subprocess.call('git reset --hard', shell=True)
     subprocess.call('git clean -f -d', shell=True)
-    subprocess.call('git checkout -B ' + branch + ' origin/' + branch, shell=True)
-    subprocess.call('git pull origin ' + branch, shell=True)
+    subprocess.call(f'git checkout -B {branch} origin/{branch}', shell=True)
+    subprocess.call(f'git pull origin {branch}', shell=True)
     subprocess.call('git reset', shell=True)
     subprocess.call('git reset --hard', shell=True)
 
     if data[1] in target_commits:
         target = target_commits[data[1]][branch]
 
-    subprocess.call('git checkout -B ' + branch + ' ' + target, shell=True)
+    subprocess.call(f'git checkout -B {branch} {target}', shell=True)
     subprocess.call('git clean -f -d', shell=True)
     subprocess.call('git reset', shell=True)
     subprocess.call('git reset --hard', shell=True)
@@ -193,16 +193,15 @@ def validate_repository_origin(data, clone_path, branch = 'master'):
 
     resstr = res.stdout.decode('ascii')
     resarr = resstr.split("\n")
-    res_orig = []
+    res_orig = [l for l in resarr if "origin" in l]
+    if not res_orig:
+        print(
+            f"The repository {clone_path} does not seem to have an origin remote. Adding it."
+        )
 
-    for l in resarr:
-        if "origin" in l:
-            res_orig.append(l)
-
-    if len(res_orig) == 0:
-        print("The repository " + clone_path + " does not seem to have an origin remote. Adding it.")
-
-        subprocess.call('git remote add origin ' + data[0][repository_index], shell=True)
+        subprocess.call(
+            f'git remote add origin {data[0][repository_index]}', shell=True
+        )
 
         os.chdir(cwd)
 
@@ -215,17 +214,13 @@ def validate_repository_origin(data, clone_path, branch = 'master'):
 
                 return
 
-    rind = 0
-
-    if 'git@' in res_orig[0]:
-        rind = 1
-
+    rind = 1 if 'git@' in res_orig[0] else 0
     subprocess.call('git remote remove origin', shell=True)
-    subprocess.call('git remote add origin ' + data[0][rind], shell=True)
+    subprocess.call(f'git remote add origin {data[0][rind]}', shell=True)
     subprocess.call('git pull origin', shell=True)
-    subprocess.call('git checkout origin/' + branch, shell=True)
+    subprocess.call(f'git checkout origin/{branch}', shell=True)
 
-    print('Updated git remote origin in ' + clone_path)
+    print(f'Updated git remote origin in {clone_path}')
 
     os.chdir(cwd)
 
@@ -242,17 +237,17 @@ def update_engine():
 def update_modules():
     for rep in module_config.module_repositories:
         update_repository(rep, module_clone_path)
-        copy_repository(rep, './engine/modules/', '.' + module_clone_path)
+        copy_repository(rep, './engine/modules/', f'.{module_clone_path}')
 
 def update_addons():
     for rep in module_config.addon_repositories:
         update_repository(rep, module_clone_path)
-        copy_repository(rep, './game/addons/', '.' + module_clone_path)
+        copy_repository(rep, './game/addons/', f'.{module_clone_path}')
 
 def update_addons_third_party_addons():
     for rep in module_config.third_party_addon_repositories:
         update_repository(rep, module_clone_path)
-        copy_repository(rep, './game/addons/', '.' + module_clone_path)
+        copy_repository(rep, './game/addons/', f'.{module_clone_path}')
 
 def update_all():
     update_engine()
@@ -270,7 +265,7 @@ def setup_engine():
 def setup_modules():
     for rep in module_config.module_repositories:
         setup_repository(rep, module_clone_path)
-        copy_repository(rep, './engine/modules/', '.' + module_clone_path)
+        copy_repository(rep, './engine/modules/', f'.{module_clone_path}')
 
     for rep in module_config.removed_modules:
         remove_repository(rep, './engine/modules/')
@@ -279,12 +274,12 @@ def setup_modules():
 def setup_addons():
     for rep in module_config.addon_repositories:
         setup_repository(rep, module_clone_path)
-        copy_repository(rep, './game/addons/', '.' + module_clone_path)
+        copy_repository(rep, './game/addons/', f'.{module_clone_path}')
 
 def setup_addons_third_party_addons():
     for rep in module_config.third_party_addon_repositories:
         setup_repository(rep, module_clone_path)
-        copy_repository(rep, './game/addons/', '.' + module_clone_path)
+        copy_repository(rep, './game/addons/', f'.{module_clone_path}')
 
 def setup_all():
     setup_engine()
@@ -307,25 +302,13 @@ def get_exports_for(platform):
         command_separator = '&'
         export_command = 'set '
 
-    command = ''
-
-    for p in exports[platform]:
-        command += export_command + p + command_separator
-
-    return command
+    return ''.join(
+        export_command + p + command_separator for p in exports[platform]
+    )
 
 def get_additional_commands_for(platform):
-    command_separator = ';'
-
-    if 'win' in sys.platform:
-        command_separator = '&'
-
-    command = ''
-
-    for p in additional_commands[platform]:
-        command += p + command_separator
-
-    return command
+    command_separator = '&' if 'win' in sys.platform else ';'
+    return ''.join(p + command_separator for p in additional_commands[platform])
 
 
 
@@ -348,7 +331,7 @@ def parse_config():
             words = line.split()
 
             if (len(words) < 2):
-                print('This build.config line is malformed, and got ignored: ' + ls)
+                print(f'This build.config line is malformed, and got ignored: {ls}')
                 continue
 
             if words[0] == 'visual_studio_vcvarsall_path':
@@ -358,16 +341,16 @@ def parse_config():
             elif words[0] == 'visual_studio_call_vcvarsall':
                 visual_studio_call_vcvarsall = words[1].lower() in [ 'true', '1', 't', 'y', 'yes' ]
             elif words[0] == 'export':
-                if (len(words) < 3) or not words[1] in exports:
-                    print('This build.config line is malformed, and got ignored: ' + ls)
+                if len(words) < 3 or words[1] not in exports:
+                    print(f'This build.config line is malformed, and got ignored: {ls}')
                     continue
 
                 export_path = format_path(ls[8 + len(words[1]):])
 
                 exports[words[1]].append(export_path)
             elif words[0] == 'run':
-                if (len(words) < 3) or not words[1] in additional_commands:
-                    print('This build.config line is malformed, and got ignored: ' + ls)
+                if len(words) < 3 or words[1] not in additional_commands:
+                    print(f'This build.config line is malformed, and got ignored: {ls}')
                     continue
 
                 final_cmd = format_path(ls[5 + len(words[1]):])

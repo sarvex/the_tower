@@ -53,12 +53,22 @@ def onerror(func, path, exc_info):
 
 def copytree(src, dst, warn = 0):
     for item in os.listdir(src):
-    
+
         sp = os.path.join(src, item)
         dp = os.path.join(dst, item)
 
         if os.path.isdir(sp):
-            if item == ".git" or item == "bin" or item == "__pycache__" or item == ".import" or item == "logs" or item == "release" or item == "export" or item == "build" or item == "libs":
+            if item in [
+                ".git",
+                "bin",
+                "__pycache__",
+                ".import",
+                "logs",
+                "release",
+                "export",
+                "build",
+                "libs",
+            ]:
                 continue
 
             #print(item)
@@ -78,10 +88,20 @@ def copytree(src, dst, warn = 0):
 
             file_size_bytes = os.path.getsize(sp)
 
-            if warn > 0 and file_size_bytes >= warn:
-                # Ignore assets, this is meant to catch temp / generated files
-                if not (item.endswith(".po") or item.endswith(".tres") or item.endswith(".ttf") or item.endswith(".tza") or item.endswith(".blend") or item.endswith(".blend1") or item.endswith(".pot")):
-                    print("WARNING! File '", sp, "' (", file_size_bytes, "bytes) is over the warn threshold!")
+            if (
+                warn > 0
+                and file_size_bytes >= warn
+                and not (
+                    item.endswith(".po")
+                    or item.endswith(".tres")
+                    or item.endswith(".ttf")
+                    or item.endswith(".tza")
+                    or item.endswith(".blend")
+                    or item.endswith(".blend1")
+                    or item.endswith(".pot")
+                )
+            ):
+                print("WARNING! File '", sp, "' (", file_size_bytes, "bytes) is over the warn threshold!")
 
             shutil.copy2(sp, dp)
 
@@ -93,14 +113,10 @@ def copy_repository(data, target_folder, clone_path):
 
 #print(sys.argv)
 
-if len(sys.argv) == 3 or len(sys.argv) == 4:
+if len(sys.argv) in {3, 4}:
     src_dir = sys.argv[1]
     dst_dir = sys.argv[2]
-    warn = 0
-
-    if len(sys.argv) == 4:
-        warn = int(sys.argv[3])
-
+    warn = int(sys.argv[3]) if len(sys.argv) == 4 else 0
     src_dir = os.path.abspath(src_dir)
     dst_dir = os.path.abspath(dst_dir)
 
